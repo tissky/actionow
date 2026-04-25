@@ -21,7 +21,7 @@ export const userService = {
 
   /** Change password (requires current password) */
   changePassword: (data: ChangePasswordRequestDTO) =>
-    api.post<null>(`${USER_BASE}/password/change`, data),
+    api.put<null>(`${USER_BASE}/me/password`, data),
 
   /** Update user profile */
   updateProfile: (data: UpdateProfileRequestDTO) =>

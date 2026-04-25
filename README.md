@@ -8,7 +8,7 @@
 <p>从剧本到分镜，从角色到成片，Actionow 把"开拍 · 此刻"变成创意团队<br/>
 触手可及的工程化工作台——智能体驱动，开箱即接最新模型，可代码级控制、可私有化部署。</p>
 
-<p><a href="https://actionow.ai"><b>actionow.ai</b></a></p>
+<p><a href="https://www.actionow.ai"><b>actionow.ai</b></a></p>
 
 <p>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0%20with%20additional%20conditions-blue.svg" alt="License"></a>
@@ -310,6 +310,6 @@ cd actionow
 
 <sub><b>Actionow</b> · Crafted for filmmakers, by engineers.</sub>
 
-<sub><a href="https://actionow.ai">actionow.ai</a></sub>
+<sub><a href="https://www.actionow.ai">actionow.ai</a></sub>
 
 </div>

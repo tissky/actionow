@@ -9,7 +9,7 @@
 director's call to <i>action, now</i> into an engineering-grade, agent-driven,<br/>
 self-hostable workspace for creative teams — onboard the latest models without a release.</p>
 
-<p><a href="https://actionow.ai"><b>actionow.ai</b></a></p>
+<p><a href="https://www.actionow.ai"><b>actionow.ai</b></a></p>
 
 <p>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0%20with%20additional%20conditions-blue.svg" alt="License"></a>
@@ -318,6 +318,6 @@ This repository is released under a [modified version of the Apache License 2.0]
 
 <sub><b>Actionow</b> · <i>Action — Now.</i> · Crafted for filmmakers, by engineers.</sub>
 
-<sub><a href="https://actionow.ai">actionow.ai</a></sub>
+<sub><a href="https://www.actionow.ai">actionow.ai</a></sub>
 
 </div>

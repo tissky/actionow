@@ -39,7 +39,10 @@ import java.util.Map;
 @Slf4j
 public class TosOssService implements OssService {
 
+    /** 公网客户端：用于生成给浏览器使用的预签名 URL */
     private final TOSV2 tosClient;
+    /** 内网客户端：服务端 SDK 调用专用，VPC 内走内网；未配置 internalEndpoint 时复用 tosClient */
+    private final TOSV2 internalTosClient;
     private final OssProperties ossProperties;
     private final OssProperties.TosConfig tosConfig;
     private final String bucketName;
@@ -55,7 +58,7 @@ public class TosOssService implements OssService {
             throw new IllegalStateException("Volcengine TOS Endpoint 未配置");
         }
 
-        // 构建 TOS 客户端
+        // 公网客户端：用于生成预签名 URL（浏览器需要能访问）
         this.tosClient = new TOSV2ClientBuilder().build(
                 tosConfig.getRegion(),
                 endpoint,
@@ -63,15 +66,36 @@ public class TosOssService implements OssService {
                 tosConfig.getSecretAccessKey()
         );
 
-        log.info("Volcengine TOS 客户端初始化完成: endpoint={}, bucket={}, region={}",
-                endpoint, bucketName, tosConfig.getRegion());
+        // 内网客户端：仅当配置了 internalEndpoint 时单独构建，否则复用公网客户端
+        String internalEndpoint = tosConfig.getInternalEndpoint();
+        if (StringUtils.hasText(internalEndpoint)) {
+            this.internalTosClient = new TOSV2ClientBuilder().build(
+                    tosConfig.getRegion(),
+                    internalEndpoint,
+                    tosConfig.getAccessKeyId(),
+                    tosConfig.getSecretAccessKey()
+            );
+            log.info("Volcengine TOS 客户端初始化完成: publicEndpoint={}, internalEndpoint={}, bucket={}, region={}",
+                    endpoint, internalEndpoint, bucketName, tosConfig.getRegion());
+        } else {
+            this.internalTosClient = this.tosClient;
+            log.info("Volcengine TOS 客户端初始化完成: endpoint={}, bucket={}, region={} (未配置内网 endpoint)",
+                    endpoint, bucketName, tosConfig.getRegion());
+        }
 
-        // 确保存储桶存在并配置 CORS
+        // 确保存储桶存在并配置 CORS（走内网）
         ensureBucketExists(bucketName);
     }
 
     @PreDestroy
     public void destroy() {
+        if (internalTosClient != null && internalTosClient != tosClient) {
+            try {
+                internalTosClient.close();
+            } catch (IOException e) {
+                log.warn("关闭 TOS 内网客户端失败", e);
+            }
+        }
         if (tosClient != null) {
             try {
                 tosClient.close();
@@ -113,7 +137,7 @@ public class TosOssService implements OssService {
                     .setContent(inputStream)
                     .setOptions(options);
 
-            tosClient.putObject(input);
+            internalTosClient.putObject(input);
 
             log.info("文件上传成功: bucket={}, object={}, size={}", bucketName, objectName, size);
             return getUrl(bucketName, objectName);
@@ -135,7 +159,7 @@ public class TosOssService implements OssService {
                     .setContent(new ByteArrayInputStream(bytes))
                     .setOptions(options);
 
-            tosClient.putObject(input);
+            internalTosClient.putObject(input);
 
             log.info("文件上传成功: bucket={}, object={}, size={}", bucket, objectName, bytes.length);
             return getUrl(bucket, objectName);
@@ -157,7 +181,7 @@ public class TosOssService implements OssService {
                     .setBucket(bucket)
                     .setKey(objectName);
 
-            GetObjectV2Output output = tosClient.getObject(input);
+            GetObjectV2Output output = internalTosClient.getObject(input);
             return output.getContent();
         } catch (TosServerException e) {
             if (e.getStatusCode() == 404) {
@@ -184,7 +208,7 @@ public class TosOssService implements OssService {
                     .setBucket(bucket)
                     .setKey(objectName);
 
-            tosClient.deleteObject(input);
+            internalTosClient.deleteObject(input);
             log.info("文件删除成功: bucket={}, object={}", bucket, objectName);
         } catch (TosClientException | TosServerException e) {
             log.error("文件删除失败: bucket={}, object={}", bucket, objectName, e);
@@ -206,7 +230,7 @@ public class TosOssService implements OssService {
                     .setBucket(targetBucket)
                     .setKey(targetObjectName);
 
-            tosClient.copyObject(input);
+            internalTosClient.copyObject(input);
             log.info("文件复制成功: {}:{} -> {}:{}", sourceBucket, sourceObjectName, targetBucket, targetObjectName);
         } catch (TosClientException | TosServerException e) {
             log.error("文件复制失败: {}:{} -> {}:{}", sourceBucket, sourceObjectName, targetBucket, targetObjectName, e);
@@ -226,7 +250,7 @@ public class TosOssService implements OssService {
                     .setBucket(bucket)
                     .setKey(objectName);
 
-            tosClient.headObject(input);
+            internalTosClient.headObject(input);
             return true;
         } catch (TosServerException e) {
             if (e.getStatusCode() == 404) {
@@ -342,7 +366,7 @@ public class TosOssService implements OssService {
             CreateBucketV2Input input = new CreateBucketV2Input()
                     .setBucket(bucket);
 
-            tosClient.createBucket(input);
+            internalTosClient.createBucket(input);
             log.info("存储桶创建成功: {}", bucket);
 
             // 配置 CORS 规则（支持浏览器直传）
@@ -379,7 +403,7 @@ public class TosOssService implements OssService {
                     .setBucket(bucket)
                     .setRules(List.of(corsRule));
 
-            tosClient.putBucketCORS(input);
+            internalTosClient.putBucketCORS(input);
             log.info("存储桶 CORS 配置成功: {}", bucket);
         } catch (TosServerException e) {
             log.warn("存储桶 CORS 配置失败: bucket={}, statusCode={}, code={}, message={}",
@@ -397,7 +421,7 @@ public class TosOssService implements OssService {
             HeadBucketV2Input input = new HeadBucketV2Input()
                     .setBucket(bucket);
 
-            tosClient.headBucket(input);
+            internalTosClient.headBucket(input);
             return true;
         } catch (TosServerException e) {
             if (e.getStatusCode() == 404) {
@@ -424,7 +448,7 @@ public class TosOssService implements OssService {
                     .setBucket(bucketName)
                     .setKey(objectName);
 
-            CreateMultipartUploadOutput output = tosClient.createMultipartUpload(input);
+            CreateMultipartUploadOutput output = internalTosClient.createMultipartUpload(input);
             String uploadId = output.getUploadID();
 
             log.info("分片上传初始化成功: object={}, uploadId={}", objectName, uploadId);
@@ -475,7 +499,7 @@ public class TosOssService implements OssService {
                     .setUploadID(uploadId)
                     .setUploadedParts(new ArrayList<>(uploadedParts));
 
-            tosClient.completeMultipartUpload(input);
+            internalTosClient.completeMultipartUpload(input);
 
             log.info("分片上传完成: object={}, uploadId={}, parts={}", objectName, uploadId, parts.size());
             return getUrl(bucketName, objectName);
@@ -493,7 +517,7 @@ public class TosOssService implements OssService {
                     .setKey(objectName)
                     .setUploadID(uploadId);
 
-            tosClient.abortMultipartUpload(input);
+            internalTosClient.abortMultipartUpload(input);
             log.info("分片上传已取消: object={}, uploadId={}", objectName, uploadId);
         } catch (TosClientException | TosServerException e) {
             log.error("取消分片上传失败: object={}, uploadId={}", objectName, uploadId, e);
@@ -513,7 +537,7 @@ public class TosOssService implements OssService {
             // 1. 初始化分片上传
             CreateMultipartUploadInput initInput = new CreateMultipartUploadInput()
                     .setBucket(bucketName).setKey(objectName);
-            CreateMultipartUploadOutput initOutput = tosClient.createMultipartUpload(initInput);
+            CreateMultipartUploadOutput initOutput = internalTosClient.createMultipartUpload(initInput);
             uploadId = initOutput.getUploadID();
 
             log.info("开始分片流式上传: object={}, uploadId={}, totalSize={}", objectName, uploadId, totalSize);
@@ -534,7 +558,7 @@ public class TosOssService implements OssService {
                         .setContentLength(bytesRead)
                         .setContent(new ByteArrayInputStream(buffer, 0, bytesRead));
 
-                UploadPartV2Output partOutput = tosClient.uploadPart(partInput);
+                UploadPartV2Output partOutput = internalTosClient.uploadPart(partInput);
                 completedParts.add(new UploadedPartV2()
                         .setPartNumber(partNumber).setEtag(partOutput.getEtag()));
 
@@ -548,7 +572,7 @@ public class TosOssService implements OssService {
             CompleteMultipartUploadV2Input completeInput = new CompleteMultipartUploadV2Input()
                     .setBucket(bucketName).setKey(objectName).setUploadID(uploadId)
                     .setUploadedParts(new ArrayList<>(completedParts));
-            tosClient.completeMultipartUpload(completeInput);
+            internalTosClient.completeMultipartUpload(completeInput);
 
             log.info("分片流式上传完成: object={}, parts={}, totalSize={}", objectName, completedParts.size(), totalUploaded);
             return getUrl(bucketName, objectName);
@@ -559,7 +583,7 @@ public class TosOssService implements OssService {
                 try {
                     AbortMultipartUploadInput abortInput = new AbortMultipartUploadInput()
                             .setBucket(bucketName).setKey(objectName).setUploadID(uploadId);
-                    tosClient.abortMultipartUpload(abortInput);
+                    internalTosClient.abortMultipartUpload(abortInput);
                     log.info("已取消失败的分片上传: object={}, uploadId={}", objectName, uploadId);
                 } catch (Exception abortEx) {
                     log.warn("取消分片上传失败: {}", abortEx.getMessage());

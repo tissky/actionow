@@ -255,10 +255,17 @@ public class OssProperties {
     public static class TosConfig {
 
         /**
-         * TOS Endpoint
+         * TOS Endpoint（公网，用于生成给浏览器使用的预签名 URL）
          * 示例: tos-cn-beijing.volces.com
          */
         private String endpoint;
+
+        /**
+         * TOS 内网 Endpoint（可选，VPC 内服务端调用专用）
+         * 示例: tos-cn-beijing.ivolces.com
+         * 留空时服务端调用退化到使用公网 endpoint
+         */
+        private String internalEndpoint;
 
         /**
          * 火山引擎 Access Key ID

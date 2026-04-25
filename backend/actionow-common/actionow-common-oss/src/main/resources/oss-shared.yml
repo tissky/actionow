@@ -49,6 +49,7 @@ actionow:
     # 火山引擎 TOS
     tos:
       endpoint: ${TOS_ENDPOINT:}
+      internal-endpoint: ${TOS_INTERNAL_ENDPOINT:}
       access-key-id: ${TOS_ACCESS_KEY_ID:}
       secret-access-key: ${TOS_SECRET_ACCESS_KEY:}
       bucket: ${TOS_BUCKET:}

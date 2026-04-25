@@ -164,6 +164,7 @@ configure_infrastructure() {
         tos)
             USE_DOCKER_MINIO="false"
             TOS_ENDPOINT=$(prompt_value "  TOS endpoint" "tos-cn-guangzhou.volces.com")
+            TOS_INTERNAL_ENDPOINT=$(prompt_value "  TOS internal endpoint (VPC 内填 e.g. tos-cn-guangzhou.ivolces.com，否则留空)" "")
             TOS_ACCESS_KEY_ID=$(prompt_value "  TOS Access Key ID" "")
             TOS_SECRET_ACCESS_KEY=$(prompt_value "  TOS Secret Access Key" "" true)
             TOS_BUCKET=$(prompt_value "  TOS bucket name" "")
@@ -481,6 +482,7 @@ ALIYUN_PRESIGNED_EXPIRE=3600
 
 # Volcengine TOS
 TOS_ENDPOINT=${TOS_ENDPOINT:-tos-cn-guangzhou.volces.com}
+TOS_INTERNAL_ENDPOINT=${TOS_INTERNAL_ENDPOINT:-}
 TOS_ACCESS_KEY_ID="${TOS_ACCESS_KEY_ID:-}"
 TOS_SECRET_ACCESS_KEY="${TOS_SECRET_ACCESS_KEY:-}"
 TOS_BUCKET=${TOS_BUCKET:-}

@@ -114,6 +114,8 @@ public class AiInternalController {
                     .executionId(executionId)
                     .providerId(request.getProviderId())
                     .taskId(request.getTaskId())
+                    .workspaceId(UserContextHolder.getWorkspaceId())
+                    .userId(UserContextHolder.getUserId())
                     .inputs(inputs)
                     .responseMode(responseMode)
                     .callbackUrl(request.getCallbackUrl())
@@ -205,6 +207,8 @@ public class AiInternalController {
                     .executionId(executionId)
                     .providerId(request.getProviderId())
                     .taskId(request.getTaskId())
+                    .workspaceId(UserContextHolder.getWorkspaceId())
+                    .userId(UserContextHolder.getUserId())
                     .inputs(inputs)
                     .responseMode(ResponseMode.STREAMING)
                     .build();
